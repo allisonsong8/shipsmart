@@ -1,4 +1,4 @@
-# ShipSmart 📦
+# ShipSmart 
 
 An AI-powered customer support chatbot built for small business owners struggling with shipping delays, tariff questions, and package tracking.
 
