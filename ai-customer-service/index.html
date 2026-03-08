@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ShipSmart — AI Support</title>
+  <link rel="icon" type="image/png" href="https://res.cloudinary.com/dgpjl9juc/image/upload/e_background_removal/w_32,h_32,c_fit/ShipSmart_Logo_pxol2b" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <!-- Cloudinary Upload Widget -->
+  <script src="https://upload-widget.cloudinary.com/global/all.js" type="text/javascript"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #faf7f4; --surface: #ffffff; --surface2: #f5f0eb;
+      --border: #e8ddd4; --accent: #e36d2e; --accent-light: #fdf0e8;
+      --accent-hover: #c85a1e; --text: #2c1f14; --muted: #9a8478;
+      --user-bubble: #e36d2e; --bot-bubble: #f5f0eb;
+      --radius: 16px; --shadow: 0 2px 16px rgba(44,31,20,0.08);
+    }
+    body {
+      font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text);
+      min-height: 100vh; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; padding: 20px;
+      background-image: radial-gradient(ellipse 50% 40% at 90% 5%, rgba(227,109,46,0.07) 0%, transparent 60%),
+        radial-gradient(ellipse 40% 30% at 5% 95%, rgba(227,109,46,0.05) 0%, transparent 60%);
+    }
+    .tabs { width: 100%; max-width: 720px; display: flex; gap: 4px; margin-bottom: 16px; background: var(--surface2); border-radius: 12px; padding: 4px; border: 1px solid var(--border); }
+    .tab { flex: 1; padding: 9px; border: none; background: transparent; border-radius: 9px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; color: var(--muted); cursor: pointer; transition: all 0.2s; }
+    .tab.active { background: var(--surface); color: var(--accent); box-shadow: var(--shadow); }
+    .header { width: 100%; max-width: 720px; margin-bottom: 16px; display: flex; align-items: center; gap: 14px; }
+    .logo { width: 46px; height: 46px; background: var(--accent-light); border-radius: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 4px 14px rgba(227,109,46,0.25); overflow: hidden; }
+    .logo img { width: 34px; height: 34px; object-fit: contain; }
+    .header-text h1 { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 700; color: var(--text); letter-spacing: -0.3px; }
+    .header-text p { font-size: 13px; color: var(--muted); margin-top: 1px; }
+    .status-dot { margin-left: auto; display: flex; align-items: center; gap: 7px; font-size: 12px; color: #16a34a; font-weight: 500; }
+    .status-dot::before { content: ''; width: 7px; height: 7px; background: #16a34a; border-radius: 50%; animation: pulse 2s ease-in-out infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    .panel { display: none; width: 100%; max-width: 720px; }
+    .panel.active { display: flex; flex-direction: column; }
+    .chat-window { background: var(--surface); border: 1px solid var(--border); border-radius: 24px; overflow: hidden; display: flex; flex-direction: column; height: 580px; box-shadow: var(--shadow); }
+    .messages { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 16px; scroll-behavior: smooth; }
+    .messages::-webkit-scrollbar { width: 4px; }
+    .messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    .msg { display: flex; gap: 10px; animation: fadeUp 0.3s ease forwards; opacity: 0; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .msg.user { flex-direction: row-reverse; }
+    .avatar { width: 32px; height: 32px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 14px; margin-top: 2px; overflow: hidden; }
+    .avatar.bot { background: var(--accent-light); box-shadow: 0 2px 8px rgba(227,109,46,0.2); }
+    .avatar.bot img { width: 22px; height: 22px; object-fit: contain; }
+    .avatar.user-av { background: var(--surface2); border: 1px solid var(--border); }
+    .bubble { max-width: 75%; padding: 12px 16px; border-radius: var(--radius); font-size: 14px; line-height: 1.6; }
+    .msg.bot .bubble { background: var(--bot-bubble); border: 1px solid var(--border); border-top-left-radius: 4px; color: var(--text); }
+    .msg.user .bubble { background: var(--user-bubble); border-top-right-radius: 4px; color: white; }
+
+    /* Image bubbles */
+    .bubble img.chat-img { max-width: 220px; border-radius: 10px; display: block; margin-top: 6px; cursor: pointer; transition: opacity 0.2s; }
+    .bubble img.chat-img:hover { opacity: 0.9; }
+    .bubble.img-only { background: transparent; border: none; padding: 0; }
+    .msg.user .bubble.img-only { background: transparent; }
+
+    .typing-indicator { display: flex; gap: 10px; animation: fadeUp 0.3s ease forwards; }
+    .typing-dots { background: var(--bot-bubble); border: 1px solid var(--border); border-radius: var(--radius); border-top-left-radius: 4px; padding: 14px 18px; display: flex; gap: 5px; align-items: center; }
+    .typing-dots span { width: 6px; height: 6px; background: var(--muted); border-radius: 50%; animation: bounce 1.2s ease infinite; }
+    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-5px); } }
+
+    .suggestions { padding: 12px 20px 14px; display: flex; gap: 8px; flex-wrap: wrap; background: var(--surface); border-top: 1px solid var(--border); }
+    .chip { background: var(--accent-light); border: 1px solid #f0d5c0; color: var(--accent); font-family: 'DM Sans', sans-serif; font-size: 12px; padding: 5px 12px; border-radius: 20px; cursor: pointer; transition: all 0.2s; }
+    .chip:hover { background: var(--accent); color: white; border-color: var(--accent); }
+
+    .input-area { padding: 10px 12px; border-top: 1px solid var(--border); background: var(--surface2); display: flex; gap: 8px; align-items: flex-end; }
+    .input-area textarea { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; padding: 11px 14px; resize: none; outline: none; line-height: 1.5; max-height: 100px; transition: border-color 0.2s; }
+    .input-area textarea::placeholder { color: var(--muted); }
+    .input-area textarea:focus { border-color: var(--accent); }
+
+    /* Upload & send buttons */
+    .icon-btn { width: 42px; height: 42px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s; color: var(--muted); font-size: 18px; }
+    .icon-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+    .send-btn { width: 42px; height: 42px; border-radius: 12px; background: linear-gradient(135deg, var(--accent), #f5956a); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: opacity 0.2s, transform 0.1s; box-shadow: 0 4px 12px rgba(227,109,46,0.3); }
+    .send-btn:hover { opacity: 0.9; }
+    .send-btn:active { transform: scale(0.95); }
+    .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .send-btn svg { width: 18px; height: 18px; fill: white; }
+
+    /* Pending image preview in input area */
+    .pending-img-wrap { position: relative; display: inline-block; margin-bottom: 6px; }
+    .pending-img-wrap img { width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 2px solid var(--accent); display: block; }
+    .pending-img-wrap .remove-pending { position: absolute; top: -6px; right: -6px; background: #dc2626; color: white; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    #pendingPreview { display: none; padding: 6px 12px 0; background: var(--surface2); border-top: 1px solid var(--border); }
+
+    /* Settings */
+    .settings-window { background: var(--surface); border: 1px solid var(--border); border-radius: 24px; padding: 28px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 24px; }
+    .settings-window h2 { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 700; color: var(--text); }
+    .settings-window p.subtitle { font-size: 13px; color: var(--muted); margin-top: 4px; }
+    .field label { display: block; font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 7px; }
+    .field input { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--text); outline: none; transition: border-color 0.2s; }
+    .field input:focus { border-color: var(--accent); }
+    .issues-list { display: flex; flex-direction: column; gap: 8px; }
+    .issue-item { display: flex; align-items: center; gap: 10px; background: var(--accent-light); border: 1px solid #f0d5c0; border-radius: 10px; padding: 10px 14px; font-size: 14px; color: var(--text); animation: fadeUp 0.2s ease forwards; }
+    .issue-item span { flex: 1; }
+    .remove-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 16px; padding: 2px 4px; border-radius: 4px; transition: color 0.2s; }
+    .remove-btn:hover { color: #dc2626; }
+    .add-issue-row { display: flex; gap: 8px; margin-top: 10px; }
+    .add-issue-row input { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--text); outline: none; transition: border-color 0.2s; }
+    .add-issue-row input:focus { border-color: var(--accent); }
+    .add-btn { background: var(--accent); color: white; border: none; border-radius: 10px; padding: 10px 18px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; transition: background 0.2s; white-space: nowrap; }
+    .add-btn:hover { background: var(--accent-hover); }
+    .save-btn { background: linear-gradient(135deg, var(--accent), #f5956a); color: white; border: none; border-radius: 12px; padding: 13px; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 500; cursor: pointer; transition: opacity 0.2s; box-shadow: 0 4px 14px rgba(227,109,46,0.3); }
+    .save-btn:hover { opacity: 0.9; }
+    .save-confirm { text-align: center; font-size: 13px; color: #16a34a; font-weight: 500; display: none; }
+    .empty-issues { font-size: 13px; color: var(--muted); font-style: italic; padding: 4px 0; }
+
+    /* Preview panel */
+    .preview-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 24px; padding: 24px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 20px; }
+    .preview-panel h3 { font-family: 'Fraunces', serif; font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+    .preview-panel p.sub { font-size: 12px; color: var(--muted); }
+    .preview-section { border: 1px solid var(--border); border-radius: 16px; padding: 18px; background: var(--surface2); }
+    .preview-section h4 { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+    .preview-section p.sub2 { font-size: 12px; color: var(--muted); margin-bottom: 14px; }
+    .color-grid { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+    .color-swatch { width: 36px; height: 36px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: transform 0.15s, border-color 0.15s; }
+    .color-swatch:hover { transform: scale(1.15); }
+    .color-swatch.selected { border-color: var(--text); transform: scale(1.15); }
+    .preview-img { width: 100%; max-width: 340px; border-radius: 14px; display: block; border: 1px solid var(--border); background: var(--surface); }
+    .send-preview-btn { margin-top: 12px; background: var(--accent); color: white; border: none; border-radius: 10px; padding: 10px 20px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; transition: background 0.2s; }
+    .send-preview-btn:hover { background: var(--accent-hover); }
+    .preview-placeholder { font-size: 13px; color: var(--muted); font-style: italic; padding: 12px 0; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">
+      <img src="https://res.cloudinary.com/dgpjl9juc/image/upload/e_background_removal/w_68,h_68,c_fit/ShipSmart_Logo_pxol2b" alt="ShipSmart logo" />
+    </div>
+    <div class="header-text">
+      <h1>ShipSmart Support</h1>
+      <p>AI-powered help for small business shipping</p>
+    </div>
+    <div class="status-dot">Online</div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('chat', this)">💬 Customer Chat</button>
+    <button class="tab" onclick="switchTab('preview', this)">🎨 Bead Preview</button>
+    <button class="tab" onclick="switchTab('settings', this)">⚙️ Owner Settings</button>
+  </div>
+
+  <!-- CHAT PANEL -->
+  <div class="panel active" id="panel-chat">
+    <div class="chat-window">
+      <div class="messages" id="messages">
+        <div class="msg bot">
+          <div class="avatar bot">
+            <img src="https://res.cloudinary.com/dgpjl9juc/image/upload/e_background_removal/w_44,h_44,c_fit/ShipSmart_Logo_pxol2b" alt="bot" />
+          </div>
+          <div class="bubble">Hi! I'm your ShipSmart assistant. You can ask me about shipping, tariffs, or send a photo of a product you're interested in! 📦</div>
+        </div>
+      </div>
+      <div class="suggestions" id="suggestions">
+        <button class="chip" onclick="sendChip(this)">Why did my shipping costs go up?</button>
+        <button class="chip" onclick="sendChip(this)">How do tariffs affect my order?</button>
+        <button class="chip" onclick="sendChip(this)">My package is delayed</button>
+        <button class="chip" onclick="sendChip(this)">Send a product photo 📷</button>
+      </div>
+      <!-- Pending image preview above input -->
+      <div id="pendingPreview">
+        <div class="pending-img-wrap">
+          <img id="pendingThumb" src="" alt="pending" />
+          <button class="remove-pending" onclick="clearPending()">✕</button>
+        </div>
+      </div>
+      <div class="input-area">
+        <!-- 📷 Upload button -->
+        <button class="icon-btn" title="Send a photo" onclick="openUploadWidget()">📷</button>
+        <textarea id="userInput" rows="1" placeholder="Ask about shipping, or attach a photo…" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PREVIEW PANEL -->
+  <div class="panel" id="panel-preview">
+    <div class="preview-panel">
+      <div>
+        <h3>✨ Product Previews</h3>
+        <p class="sub">Generate previews to send to customers in chat.</p>
+      </div>
+
+      <!-- Section 1: Bead color preview -->
+      <div class="preview-section">
+        <h4>🎨 Bead Color Preview</h4>
+        <p class="sub2">Pick a color to see how the charm would look, then send it to the customer.</p>
+        <div class="color-grid" id="colorGrid"></div>
+        <p class="preview-placeholder" id="beadPlaceholder">Select a color above to see a preview.</p>
+        <img id="beadPreviewImg" class="preview-img" style="display:none;" alt="Bead color preview" />
+        <button class="send-preview-btn" onclick="sendBeadPreviewToChat()">📤 Send color preview to chat</button>
+      </div>
+
+      <!-- Section 2: Packaging preview -->
+      <div class="preview-section">
+        <h4>📦 Packaging Preview</h4>
+        <p class="sub2">Show the customer what their charm looks like in your packaging.</p>
+        <p class="preview-placeholder" id="packagingPlaceholder">Loading packaging preview…</p>
+        <img id="packagingPreviewImg" class="preview-img" style="display:none;" alt="Packaging preview" />
+        <button class="send-preview-btn" onclick="sendPackagingPreviewToChat()">📤 Send packaging preview to chat</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS PANEL -->
+  <div class="panel" id="panel-settings">
+    <div class="settings-window">
+      <div>
+        <h2>Owner Settings</h2>
+        <p class="subtitle">Customize how the chatbot represents your business.</p>
+      </div>
+      <div class="field">
+        <label>Business Name</label>
+        <input type="text" id="bizName" placeholder="e.g. Allis's Handmade Shop" />
+      </div>
+      <div class="field">
+        <label>Common Issues Your Customers Face</label>
+        <div class="issues-list" id="issuesList">
+          <p class="empty-issues" id="emptyMsg">No issues added yet.</p>
+        </div>
+        <div class="add-issue-row">
+          <input type="text" id="newIssue" placeholder="e.g. packages being stolen from doorstep" onkeydown="if(event.key==='Enter') addIssue()" />
+          <button class="add-btn" onclick="addIssue()">+ Add</button>
+        </div>
+      </div>
+      <button class="save-btn" onclick="saveSettings()">Save Settings</button>
+      <p class="save-confirm" id="saveConfirm">✓ Settings saved! The chatbot will now use these.</p>
+    </div>
+  </div>
+
+  <script>
+    // ─── Cloudinary config ───────────────────────────────────────────
+    const CLOUD_NAME    = 'dgpjl9juc';
+    const UPLOAD_PRESET = 'pkkfwebu';
+    const LOGO_URL = `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/e_background_removal/w_44,h_44,c_fit/ShipSmart_Logo_pxol2b`;
+    const CHARM_ID      = 'Keychain_ShipSmart_Demo_pik6j2';
+    const PACKAGING_ID  = 'Packaging_Demo_mvcgma';
+
+    // ─── Bead colors ─────────────────────────────────────────────────
+    const BEAD_COLORS = [
+      { name: 'Ruby Red',    hex: 'C0392B' },
+      { name: 'Cobalt Blue', hex: '2980B9' },
+      { name: 'Emerald',     hex: '27AE60' },
+      { name: 'Goldenrod',   hex: 'F39C12' },
+      { name: 'Violet',      hex: '8E44AD' },
+      { name: 'Rose Gold',   hex: 'E8A598' },
+      { name: 'Midnight',    hex: '2C3E50' },
+      { name: 'Coral',       hex: 'E36D2E' },
+      { name: 'Ivory',       hex: 'F5F0EB' },
+      { name: 'Slate',       hex: '7F8C8D' },
+    ];
+
+    let pendingImageUrl = null;
+    let selectedColor   = null;
+    let issues          = [];
+    let lastCustomerUploadId = null;
+
+    // ─── Build bead swatches ─────────────────────────────────────────
+    const colorGrid = document.getElementById('colorGrid');
+    BEAD_COLORS.forEach(c => {
+      const sw = document.createElement('div');
+      sw.className = 'color-swatch';
+      sw.style.background = `#${c.hex}`;
+      sw.title = c.name;
+      sw.onclick = () => selectColor(c, sw);
+      colorGrid.appendChild(sw);
+    });
+
+    function selectColor(color, el) {
+      document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+      el.classList.add('selected');
+      selectedColor = color;
+      const baseId = lastCustomerUploadId || CHARM_ID;
+      const url = `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/e_background_removal/e_colorize:30,co_rgb:${color.hex}/${baseId}`;
+      document.getElementById('beadPlaceholder').style.display = 'none';
+      const img = document.getElementById('beadPreviewImg');
+      img.style.display = 'block';
+      img.src = url;
+      img.alt = `${color.name} bead preview`;
+    }
+
+    function sendBeadPreviewToChat() {
+      if (!selectedColor) { alert('Please select a color first!'); return; }
+      const baseId = lastCustomerUploadId || CHARM_ID;
+      const url = `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/e_background_removal/e_colorize:30,co_rgb:${selectedColor.hex}/${baseId}`;
+      switchTab('chat', document.querySelectorAll('.tab')[0]);
+      addImageMessage(url, `Here's a preview with ${selectedColor.name} beads! 💎`, 'bot');
+    }
+
+    // ─── Packaging preview ───────────────────────────────────────────
+    // Overlay charm (background removed) centered on packaging photo
+    function buildPackagingUrl(charmId) {
+      const charm = encodeURIComponent(`l_${charmId},e_background_removal,w_0.4,fl_relative,g_center`);
+      return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/l_${charmId}/w_0.45,fl_relative,g_center,fl_layer_apply/${PACKAGING_ID}`;
+    }
+
+    function loadPackagingPreview() {
+      const charmId = lastCustomerUploadId || CHARM_ID;
+      const url = buildPackagingUrl(charmId);
+      const placeholder = document.getElementById('packagingPlaceholder');
+      const img = document.getElementById('packagingPreviewImg');
+      placeholder.style.display = 'none';
+      img.style.display = 'block';
+      img.src = url;
+    }
+    // Load on page ready
+    window.addEventListener('load', loadPackagingPreview);
+
+    function sendPackagingPreviewToChat() {
+      const charmId = lastCustomerUploadId || CHARM_ID;
+      const url = buildPackagingUrl(charmId);
+      switchTab('chat', document.querySelectorAll('.tab')[0]);
+      addImageMessage(url, `Here's how your charm will look in our packaging! 📦`, 'bot');
+    }
+
+    function openUploadWidget() {
+      cloudinary.openUploadWidget(
+        {
+          cloudName: CLOUD_NAME,
+          uploadPreset: UPLOAD_PRESET,
+          sources: ['local', 'camera'],
+          multiple: false,
+          cropping: false,
+          resourceType: 'image',
+          clientAllowedFormats: ['jpg', 'jpeg', 'png', 'webp', 'gif'],
+          maxFileSize: 5000000,
+          styles: {
+            palette: {
+              window: '#FFFFFF',
+              windowBorder: '#E8DDD4',
+              tabIcon: '#E36D2E',
+              menuIcons: '#9A8478',
+              textDark: '#2C1F14',
+              textLight: '#FFFFFF',
+              link: '#E36D2E',
+              action: '#E36D2E',
+              inactiveTabIcon: '#9A8478',
+              error: '#DC2626',
+              inProgress: '#E36D2E',
+              complete: '#16A34A',
+              sourceBg: '#FAF7F4'
+            }
+          }
+        },
+        (error, result) => {
+          if (!error && result && result.event === 'success') {
+            const info = result.info;
+            lastCustomerUploadId = info.public_id;
+            pendingImageUrl = info.secure_url;
+            document.getElementById('pendingThumb').src = info.secure_url;
+            document.getElementById('pendingPreview').style.display = 'block';
+            // Refresh packaging preview with customer's uploaded photo
+            loadPackagingPreview();
+          }
+        }
+      );
+    }
+
+    function clearPending() {
+      pendingImageUrl = null;
+      document.getElementById('pendingPreview').style.display = 'none';
+      document.getElementById('pendingThumb').src = '';
+    }
+
+    // ─── Chat helpers ────────────────────────────────────────────────
+    const messagesEl = document.getElementById('messages');
+    const inputEl    = document.getElementById('userInput');
+    const sendBtn    = document.getElementById('sendBtn');
+
+    function addMessage(text, role) {
+      const div = document.createElement('div');
+      div.className = `msg ${role}`;
+      div.innerHTML = `
+        <div class="avatar ${role === 'bot' ? 'bot' : 'user-av'}">
+          ${role === 'bot' ? `<img src="${LOGO_URL}" alt="bot"/>` : '🧑'}
+        </div>
+        <div class="bubble">${text}</div>`;
+      messagesEl.appendChild(div);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function addImageMessage(imgUrl, caption, role) {
+      const div = document.createElement('div');
+      div.className = `msg ${role}`;
+      div.innerHTML = `
+        <div class="avatar ${role === 'bot' ? 'bot' : 'user-av'}">
+          ${role === 'bot' ? `<img src="${LOGO_URL}" alt="bot"/>` : '🧑'}
+        </div>
+        <div class="bubble">
+          ${caption ? `<span>${caption}</span>` : ''}
+          <img class="chat-img" src="${imgUrl}" alt="product photo" onclick="window.open('${imgUrl}','_blank')" />
+        </div>`;
+      messagesEl.appendChild(div);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function showTyping() {
+      const div = document.createElement('div');
+      div.className = 'typing-indicator'; div.id = 'typing';
+      div.innerHTML = `<div class="avatar bot"><img src="${LOGO_URL}" alt="bot"/></div><div class="typing-dots"><span></span><span></span><span></span></div>`;
+      messagesEl.appendChild(div);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+    function removeTyping() { const t = document.getElementById('typing'); if (t) t.remove(); }
+
+    // ─── Send message ────────────────────────────────────────────────
+    async function sendMessage() {
+      const text = inputEl.value.trim();
+      if (!text && !pendingImageUrl) return;
+
+      // Show user's image if attached
+      if (pendingImageUrl) {
+        addImageMessage(pendingImageUrl, text || '', 'user');
+      } else {
+        addMessage(text, 'user');
+      }
+
+      const messageText = text || 'I sent you a photo of a product I\'m interested in.';
+      const imageUrl = pendingImageUrl;
+
+      inputEl.value = '';
+      inputEl.style.height = 'auto';
+      clearPending();
+      sendBtn.disabled = true;
+      document.getElementById('suggestions').style.display = 'none';
+      showTyping();
+
+      try {
+        const res = await fetch('/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: messageText, image_url: imageUrl })
+        });
+        const data = await res.json();
+        removeTyping();
+        addMessage(data.reply, 'bot');
+      } catch (err) {
+        removeTyping();
+        addMessage('Sorry, something went wrong. Please try again!', 'bot');
+      }
+      sendBtn.disabled = false;
+      inputEl.focus();
+    }
+
+    // ─── Tab switching ───────────────────────────────────────────────
+    function switchTab(tab, btn) {
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.getElementById('panel-' + tab).classList.add('active');
+      if (btn) btn.classList.add('active');
+    }
+
+    // Override switchTab calls from tab buttons to pass correct element
+    document.querySelectorAll('.tab').forEach((btn, i) => {
+      const tabs = ['chat', 'preview', 'settings'];
+      btn.onclick = () => switchTab(tabs[i], btn);
+    });
+
+    // ─── Settings ────────────────────────────────────────────────────
+    async function loadSettings() {
+      try {
+        const res = await fetch('/settings');
+        const data = await res.json();
+        document.getElementById('bizName').value = data.business_name || '';
+        issues = data.common_issues || [];
+        renderIssues();
+      } catch(e) {}
+    }
+    loadSettings();
+
+    function renderIssues() {
+      const list = document.getElementById('issuesList');
+      list.querySelectorAll('.issue-item').forEach(e => e.remove());
+      document.getElementById('emptyMsg').style.display = issues.length === 0 ? 'block' : 'none';
+      issues.forEach((issue, i) => {
+        const div = document.createElement('div');
+        div.className = 'issue-item';
+        div.innerHTML = `<span>${issue}</span><button class="remove-btn" onclick="removeIssue(${i})">✕</button>`;
+        list.appendChild(div);
+      });
+    }
+    function addIssue() {
+      const input = document.getElementById('newIssue');
+      const val = input.value.trim();
+      if (!val) return;
+      issues.push(val); input.value = ''; renderIssues();
+    }
+    function removeIssue(i) { issues.splice(i, 1); renderIssues(); }
+    async function saveSettings() {
+      const bizName = document.getElementById('bizName').value.trim() || 'My Shop';
+      await fetch('/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ business_name: bizName, common_issues: issues }) });
+      const confirm = document.getElementById('saveConfirm');
+      confirm.style.display = 'block';
+      setTimeout(() => confirm.style.display = 'none', 3000);
+    }
+
+    function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 100) + 'px'; }
+    function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
+    function sendChip(btn) {
+      if (btn.textContent.includes('photo')) { openUploadWidget(); return; }
+      inputEl.value = btn.textContent;
+      document.getElementById('suggestions').style.display = 'none';
+      sendMessage();
+    }
+  </script>
+</body>
+</html>
