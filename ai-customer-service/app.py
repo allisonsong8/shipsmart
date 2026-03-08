@@ -1,13 +1,9 @@
 from flask import Flask, request, jsonify, send_from_directory
 from groq import Groq
-from dotenv import load_dotenv
-import os
-
-load_dotenv()
 
 app = Flask(__name__)
 
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+client = Groq(api_key="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")
 
 owner_settings = {
     "business_name": "My Shop",
