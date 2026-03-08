@@ -3,7 +3,7 @@ from groq import Groq
 
 app = Flask(__name__)
 
-client = Groq(api_key="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")
+client = Groq(api_key="your_groq_api_key_here")
 
 owner_settings = {
     "business_name": "My Shop",
